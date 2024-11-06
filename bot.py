@@ -12,7 +12,7 @@ if TOKEN is None:
     raise ValueError("BOT_TOKEN environment variable is not set!")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text("Hello! Isasdasss'm your bot. How can I help you?")
+    await update.message.reply_text("Кандайсынар?")
 
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(update.message.text)
