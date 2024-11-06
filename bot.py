@@ -1,10 +1,18 @@
+import os
+from dotenv import load_dotenv
+load_dotenv()
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
-TOKEN = "7736749449:AAGExAxvHsMPDvFIvF59u0NjhuQ6QWFWpMc"  # Замени на твой токен
+# Получаем токен из переменной окружения
+TOKEN = os.getenv("BOT_TOKEN")
+
+# Проверим, если токен не найден
+if TOKEN is None:
+    raise ValueError("BOT_TOKEN environment variable is not set!")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text("Hello! I'm your bot. How can I help you?")
+    await update.message.reply_text("Hello! Isasdasss'm your bot. How can I help you?")
 
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(update.message.text)
