@@ -1,11 +1,10 @@
 import os
 from dotenv import load_dotenv
-load_dotenv()
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+from telegram import Update, ReplyKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes, CallbackContext
 from typing import List, Tuple
 
-# Получаем токен из переменной окружения
+load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
 
 # Проверим, если токен не найден
@@ -13,7 +12,6 @@ if TOKEN is None:
     raise ValueError("BOT_TOKEN environment variable is not set!")
 
 # Пример списка игроков с коэффициентами
-# Это должно быть частью вашего кода, где вы передаете список игроков
 sorted_players = [
     ("Player1", 1.1),
     ("Player2", 2.3),
@@ -31,41 +29,34 @@ sorted_players = [
 
 # Функция для распределения игроков по командам
 def split_players(sorted_players: List[Tuple[str, float]], num_teams: int):
-    # Initialize teams and their sums
     teams = [[] for _ in range(num_teams)]
     team_sums = [0] * num_teams
 
-    # Distribute players by adding the highest available coefficient to the team with the lowest sum
     for player, coef in sorted(sorted_players, key=lambda x: x[1], reverse=True):
-        # Find the team with the minimum sum to add the next player
         min_team_idx = team_sums.index(min(team_sums))
         teams[min_team_idx].append((player, coef))
         team_sums[min_team_idx] += coef
 
     return teams, team_sums
 
+# Команда /start с кнопками
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text("Hello! I'm your bot. How can I help you?")
+    keyboard = [[str(i)] for i in range(2, 6)]  # Кнопки от 2 до 5 команд
+    reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+    await update.message.reply_text("Choose the number of teams:", reply_markup=reply_markup)
 
-async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text(update.message.text)
-
-async def split(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    # Получаем аргумент из команды
+# Обработчик выбора количества команд
+async def split(update: Update, context: CallbackContext) -> None:
     try:
-        num_teams = int(context.args[0])  # Читаем количество команд
-    except (IndexError, ValueError):
-        await update.message.reply_text("Please specify the number of teams (e.g. /split 4).")
+        num_teams = int(update.message.text)
+        if num_teams < 2 or num_teams > len(sorted_players):
+            await update.message.reply_text(f"Please choose a number between 2 and {len(sorted_players)}.")
+            return
+    except ValueError:
+        await update.message.reply_text("Please select a valid number of teams.")
         return
 
-    if num_teams < 2 or num_teams > len(sorted_players):
-        await update.message.reply_text("Please choose a number of teams between 2 and {}.".format(len(sorted_players)))
-        return
-
-    # Разбиваем игроков по командам
     teams, team_sums = split_players(sorted_players, num_teams)
-
-    # Формируем сообщение с результатами
     response = f"Players have been split into {num_teams} teams:\n"
     for i, team in enumerate(teams):
         response += f"\nTeam {i + 1} (Sum: {team_sums[i]}):\n"
@@ -76,15 +67,12 @@ async def split(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
-
+    
     # Добавляем команду /start
     app.add_handler(CommandHandler("start", start))
     
-    # Добавляем команду /split
-    app.add_handler(CommandHandler("split", split))
-    
-    # Добавляем обработчик текстовых сообщений
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
+    # Обрабатываем выбранное количество команд через текстовые сообщения
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, split))
     
     # Запускаем бота
     app.run_polling()
